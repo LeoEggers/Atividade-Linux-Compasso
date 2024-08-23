@@ -1,0 +1,50 @@
+    1. Criar uma VPC (VPC-Atividade-Linux)
+       
+       aws ec2 create-vpc --cidr-block 10.0.0.0/16 --output json
+       Salve o ID da VPC retornado para uso posterior.
+    2. Criar e Associar uma Subnet Pública (SN-Atividade-Linux)
+       
+       aws ec2 create-subnet --vpc-id <vpc-id> --cidr-block 10.0.1.0/24 --availability-zone <zone> --output json
+       Substitua <vpc-id> pelo ID da VPC e <zone> pela zona de disponibilidade desejada. Salve o ID da subnet retornado.
+    3. Criar um Internet Gateway (IGW-Atividade-Linux) e Associar à VPC
+       
+       aws ec2 create-internet-gateway --output json
+       Salve o ID do IGW retornado e associe-o à VPC:
+       
+       aws ec2 attach-internet-gateway --vpc-id <vpc-id> --internet-gateway-id <igw-id>
+       Substitua <vpc-id> pelo ID da VPC e <igw-id> pelo ID do Internet Gateway.
+    4. Criar uma Route Table (RT-Atividade-Linux) e Associar à VPC
+       
+       aws ec2 create-route-table --vpc-id <vpc-id> --output json
+       Salve o ID da Route Table retornado. Em seguida, adicione uma rota para o Internet Gateway:
+       
+       aws ec2 create-route --route-table-id <rt-id> --destination-cidr-block 0.0.0.0/0 --gateway-id <igw-id>
+       Substitua <rt-id> pelo ID da Route Table e <igw-id> pelo ID do Internet Gateway.
+       Associe a Route Table à subnet:
+       
+       aws ec2 associate-route-table --route-table-id <rt-id> --subnet-id <subnet-id>
+    5. Criar uma Instância EC2 com Amazon Linux 2
+       
+       aws ec2 run-instances --image-id <ami-id> --count 1 --instance-type t3.small --key-name ChavesCompasso --security-group-ids <sg-id> --subnet-id <subnet-id> --associate-public-ip-address --block-device-mappings DeviceName=/dev/xvda,Ebs={VolumeSize=16,VolumeType=gp2}
+       Substitua <ami-id> pela ID da Amazon Machine Image (AMI) do Amazon Linux 2, <sg-id> pelo ID do Security Group, e <subnet-id> pelo ID da subnet.
+    6. Criar um Security Group (SG-Atividade-Linux) com Regras Específicas
+       
+       aws ec2 create-security-group --group-name SG-Atividade-Linux --description "Security Group para Atividade Linux" --vpc-id <vpc-id> --output json
+       Salve o ID do Security Group retornado e adicione regras de entrada:
+       
+       aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol tcp --port 22 --cidr 0.0.0.0/0
+       aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol tcp --port 80 --cidr 0.0.0.0/0
+       aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol tcp --port 443 --cidr 0.0.0.0/0
+       aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol tcp --port 111 --cidr 0.0.0.0/0
+       aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol udp --port 111 --cidr 0.0.0.0/0
+       aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol tcp --port 2049 --cidr 0.0.0.0/0
+       aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol udp --port 2049 --cidr 0.0.0.0/0
+       Substitua <sg-id> pelo ID do Security Group.
+    7. Gerar um Elastic IP (IPE-Atividade-Linux) e Anexar à Instância EC2
+       Primeiro, aloque um Elastic IP:
+       
+       aws ec2 allocate-address --output json
+       Salve o ID do Elastic IP e associe-o à instância:
+       
+       aws ec2 associate-address --instance-id <instance-id> --allocation-id <eip-id>
+       Substitua <instance-id> pelo ID da instância e <eip-id> pelo ID do Elastic IP.
