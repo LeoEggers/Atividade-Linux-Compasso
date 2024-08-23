@@ -1,0 +1,52 @@
+Manual de Configuração e Monitoramento dos Serviços no Linux
+
+    1. Criar Diretório para Logs NFS
+       
+       sudo mkdir -p /mnt/leo-Logs-NFS
+    2. Configurar Export do NFS
+       
+       sudo vi /etc/exports
+       Dentro do arquivo:
+       
+       /mnt/leo-Logs-NFS *(rw,sync,no_subtree_check)
+
+       sudo exportfs -a
+    3. Criar Subdiretório para Logs
+       
+       sudo mkdir /mnt/leo-Logs-NFS/leo
+    4. Instalar e Configurar Apache
+       
+       sudo yum install httpd -y
+       sudo systemctl start httpd
+       sudo systemctl enable httpd
+    5. Criar Script de Monitoramento
+
+       sudo vi /usr/local/bin/check_service.sh
+       Dentro do arquivo:
+       #!/bin/bash
+       
+       SERVICE="httpd"
+       TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+       LOG_DIR="/mnt/leo-Logs-NFS/leo"
+       ONLINE_LOG="$LOG_DIR/${SERVICE}_online.log"
+       OFFLINE_LOG="$LOG_DIR/${SERVICE}_offline.log"
+       
+       if systemctl is-active --quiet $SERVICE; then
+           echo "$TIMESTAMP $SERVICE ONLINE" >> $ONLINE_LOG
+           rm -f $OFFLINE_LOG
+       else
+           echo "$TIMESTAMP $SERVICE OFFLINE" >> $OFFLINE_LOG
+           rm -f $ONLINE_LOG
+       fi
+    6. Permitir Execução do Script
+       
+       sudo chmod +x /usr/local/bin/check_service.sh
+    7. Configurar Cron para Execução Automática
+       
+       sudo crontab -e
+       Dentro do arquivo:
+       
+       */5 * * * * /usr/local/bin/check_service.sh
+
+
+sudo mount -t nfs <IP_do_Servidor_NFS>:/mnt/leo-Logs-NFS /mnt/teste-nfs
